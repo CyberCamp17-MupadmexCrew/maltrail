@@ -8,21 +8,47 @@ from processes import search_process_linux
 
 
 HOST = ''  # All interfaces
-PORT = 2023
+PORT = 2017
 modes = {"get_pid": "get_pid", "kill_pid": "kill_pid"}
 
 LINUX = 'Linus'
 WINDOWS = 'Windows'
 MAC = 'Darwin'
 
+## Input Checks
+def is_valid_ip(ip):
+    m = re.match(r"^((\d{1,3})\.){3}(\d{1,3})$", ip)
+    return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
+
+def is_valid_port(port):
+    return str(port).isdigit() and int(port) < 65535
+
+def is_valid_prot(prot):
+    return prot.lower() in ["tcp","udp","icmp"]
+
+def is_valid_timeStamp(tstamp):
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2} (\d{1,2}:){2}\d{1,2}\.\d{6}$", tstamp))
+
+def is_valid_procName(pname):
+    return bool(re.match(r"^[\w\d _-]+$", pname))
+
+def check_get_pid_params(prot, ipdst, portdst, tstamp):
+    return is_valid_prot(prot) and is_valid_ip(ipdst) and is_valid_port(port) and is_valid_timeStamp(tstamp)
+
+def check_kill_pid_params(pid, pname):
+    return str(pid).isdigit() and is_valid_procName(pname)
+####
+
 
 # Example:
 # Receive: get_pid,udp,192.168.0.200,8080,2017-07-03 23:29:32.689208
 # Send: 1298,Firefox
-
-def proc_get_pid(split_data):
+def proc_get_pid(split_data): #Return the response to the server
     prot, ipdst, portdst, tstamp = split_data
-
+    prot = prot.lower()
+    if not check_get_pid_params(prot, ipdst, portdst, tstamp):
+        return "-1,error checking input"
+    
     system = platform.system()
 
     if system is LINUX:
@@ -37,9 +63,12 @@ def proc_get_pid(split_data):
 
 # Example: kill_pid,1987,Firefox
 # Send: correct
-def proc_kill_pid(split_data):
+def proc_kill_pid(split_data): #Return the response to the server
     pid, pname = split_data
+    pname = pname.lower()
     error = "error"
+    if not check_kill_pid_params(pid, pname):
+        return "error checking input"
     try:
         p = psutil.Process(int(pid))
         if pname == p.name():
@@ -62,7 +91,7 @@ def proc_recv_data(con, data):
         reply = proc_kill_pid(split_data[1:])
 
     else:
-        reply = "no_correct_mode"
+        reply = "no correct mode"
 
     con.sendall(reply)
 
