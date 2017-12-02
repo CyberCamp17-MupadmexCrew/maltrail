@@ -4,7 +4,7 @@ from thread import *
 import psutil
 import platform
 
-from processes import LinuxSensor, GenericSensor
+from processes import LinuxSensor, GenericSensor, MacOSSensor
 from utils import sanitizer
 
 HOST = ''  # All interfaces
@@ -61,7 +61,7 @@ def get_specific_sensor():
     elif system == WINDOWS:
         return GenericSensor()
     elif system == MAC:
-        pass
+        return MacOSSensor()
     else:
         return GenericSensor()
 

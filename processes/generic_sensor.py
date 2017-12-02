@@ -22,7 +22,6 @@ class GenericSensor:
     def close(self):
         pass
 
-
 def _find_pid(ip_dst, port_dst):
     for p in psutil.net_connections():
         if p.raddr != () and p.raddr.ip == ip_dst and p.raddr.port == int(port_dst):

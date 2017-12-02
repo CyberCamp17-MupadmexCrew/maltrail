@@ -11,7 +11,7 @@ _DATE_FORMAT = '%m/%d/%Y %H:%M:%S'  # Date format used by audit
 
 class LinuxSensor:
     def __init__(self):
-        print '[i] Initialising audit daemon and hooking up rules'
+        print '[i] Initializing audit daemon and hooking up rules'
         _exec_and_wait('/etc/init.d/auditd start')
         _exec_and_wait('auditctl -a exit,always -F arch=b64 -S connect -k maltrail')
 
