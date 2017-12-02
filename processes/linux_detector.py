@@ -27,13 +27,26 @@ def _parse_timestamp(timestamp):
 
 
 def _get_last_connection(ip_dest, port_dest, timestamp_end, timestamp_start):
-    command = 'ausearch -i -sc connect -e 0 -k MYCONNECT -te ' + timestamp_end + ' -ts ' + timestamp_start \
-              + '| grep "laddr=' + ip_dest + ' lport=' + port_dest + '" -C 1 ' + '| tail -3'
+
+    if port_dest == 0:
+        command = _get_command_without_port(ip_dest, timestamp_end, timestamp_start)
+    else:
+        command = _get_command(ip_dest, port_dest, timestamp_end, timestamp_start)
 
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     proc.wait()
 
     return proc.stdout.read()
+
+
+def _get_command(ip_dest, port_dest, timestamp_end, timestamp_start):
+    return 'ausearch -i -sc connect -e 0 -k MYCONNECT -te ' + timestamp_end + ' -ts ' + timestamp_start \
+           + '| grep "laddr=' + ip_dest + ' lport=' + port_dest + '" -C 1 ' + '| tail -3'
+
+
+def _get_command_without_port(ip_dest, timestamp_end, timestamp_start):
+    return 'ausearch -i -sc connect -e 0 -k MYCONNECT -te ' + timestamp_end + ' -ts ' + timestamp_start \
+           + '| grep "laddr=' + ip_dest + '"  -C 1 ' + '| tail -3'
 
 
 def _parse_pid(raw_connection):
