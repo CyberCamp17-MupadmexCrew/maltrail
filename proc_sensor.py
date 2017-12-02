@@ -20,7 +20,7 @@ MAC = 'Darwin'
 ## Input Checks
 def is_valid_ip(ip):
     m = re.match(r"^((\d{1,3})\.){3}(\d{1,3})$", ip)
-    return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))  # TODO fix it
+    return bool(m) and all(map(lambda n: 0 <= int(n[:2]) <= 255, m.groups()))  # TODO fix it
 
 
 def is_valid_port(port):
