@@ -10,13 +10,13 @@ _DATE_FORMAT = '%m/%d/%Y %H:%M:%S'  # Date format used by audit
 
 
 def init_detector():
-    _exec_and_wait('/etc/init.d/audit.d start')
+    _exec_and_wait('/etc/init.d/auditd start')
     _exec_and_wait('auditctl -a exit,always -F arch=b64 -S connect -k maltrail')
 
 
 def close_detector():
     _exec_and_wait('auditctl -d exit,always -F arch=b64 -S connect -k maltrail')
-    _exec_and_wait('/etc/init.d/audit.d stop')
+    _exec_and_wait('/etc/init.d/auditd stop')
 
 
 def search_process(ip_dest, port_dest, timestamp):
