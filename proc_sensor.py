@@ -3,7 +3,7 @@ import sys
 from thread import *
 import psutil
 import platform
-
+import signal
 from processes import LinuxSensor, GenericSensor
 from utils import sanitizer
 
@@ -16,53 +16,72 @@ WINDOWS = 'Windows'
 MAC = 'Darwin'
 
 
-def main():
-    """
-    Listens for a request, process it and replies with the corresponding PID or killing the specific PID
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+class ProcessSensor:
+    def __init__(self):
+        self.sensor = get_specific_sensor()
+        self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    sensor = get_specific_sensor()
+    def start(self):
+        """
+        Listens for a request, process it and replies with the corresponding PID or killing the specific PID
+        """
 
-    try:
-        s.bind((HOST, PORT))
-    except socket.error as msg:
-        print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
-        sys.exit()
+        self._hook_termination_handler()
 
-    s.listen(5)
+        try:
+            self.soc.bind((HOST, PORT))
+        except socket.error as msg:
+            print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            sys.exit()
 
-    def client_thread(connection):
+        self.soc.listen(5)
+
+        while True:
+            connection, addr = self.soc.accept()
+            start_new_thread(self._client_thread, (connection,))
+
+        self.soc.close()
+
+    def _client_thread(self, connection):
         while True:
             data = connection.recv(1024)
             if not data:
                 break
 
-            reply = process_received_data(data, sensor)
+            reply = process_received_data(data, self.sensor)
             connection.send(reply)
 
         connection.close()
 
-    while True:
-        connection, addr = s.accept()
-        start_new_thread(client_thread, (connection,))
+    def _termination_handler(self, signum, frame):
+        """
+         If the process is terminated, sensor.close will be called
+        """
+        print '[i] Shutting down...'
+        self.sensor.close()
+        sys.exit(1)
 
-    s.close()
+    def _hook_termination_handler(self):
+        signal.signal(signal.SIGTERM, self._termination_handler)
+        signal.signal(signal.SIGINT, self._termination_handler)
 
 
 def get_specific_sensor():
     """
-    :return: Platform specific sensor
+    :return: Platform specific sensor, if there is any problem initializing the sensor, the generic one will be return
     """
     system = platform.system()
 
-    if system == LINUX:
-        return LinuxSensor()
-    elif system == WINDOWS:
-        return GenericSensor()
-    elif system == MAC:
-        pass
-    else:
+    try:
+        if system == LINUX:
+            return LinuxSensor()
+        elif system == WINDOWS:
+            return GenericSensor()
+        elif system == MAC:
+            pass
+        else:
+            return GenericSensor()
+    except:  # TODO create custom exception and catch it here
         return GenericSensor()
 
 
@@ -80,9 +99,6 @@ def process_received_data(data, sensor):
     return reply
 
 
-# Example:
-# Receive: get_pid,udp,192.168.0.200,8080,2017-07-03 23:29:32.689208
-# Send:
 def _get_pid(split_data, sensor):
     """
     Uses the sensor to retrieve the PID and process name
@@ -124,4 +140,5 @@ def _kill_pid(split_data):
 
 
 if __name__ == '__main__':
-    main()
+    process_sensor = ProcessSensor()
+    process_sensor.start()

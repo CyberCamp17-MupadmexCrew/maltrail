@@ -14,6 +14,7 @@ class LinuxSensor:
         print '[i] Initialising audit daemon and hooking up rules'
         _exec_and_wait('/etc/init.d/auditd start')
         _exec_and_wait('auditctl -a exit,always -F arch=b64 -S connect -k maltrail')
+        print '[i] Linux sensor ready'
 
     def search_process(self, prot, ip_dest, port_dest, timestamp):
         timestamp_end, timestamp_start = _parse_timestamp(timestamp)
