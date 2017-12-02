@@ -41,6 +41,7 @@ def _parse_timestamp(timestamp):
 
     return end_datetime.strftime(_DATE_FORMAT), start_datetime.strftime(_DATE_FORMAT)
 
+
 def _get_last_connection(ip_dest, port_dest, timestamp_end, timestamp_start):
     """
      Get the last audit log entry for the given ip, port and time window
@@ -88,7 +89,7 @@ def _exec_and_wait(command):
 
 def _parse_pid(raw_connection):
     print '[i] Raw response: ' + raw_connection
-    pid = re.search('pid=(\d+)', raw_connection).group(1)
+    pid = re.search(' pid=(\d+)', raw_connection).group(1)
     process_name = re.search('proctitle=(.+)', raw_connection).group(1)
 
     return pid + ',' + process_name
