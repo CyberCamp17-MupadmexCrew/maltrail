@@ -6,6 +6,7 @@
 
 - [Introduction](#introduction)
 - [CyberCamp 2017 new functionalities](#cybercamp-2017-new-functionalities)
+  - [Basic installation and running](#basic-installation-and-running)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
 - [Administrator's guide](#administrators-guide)
@@ -158,6 +159,50 @@ The correlation between sent packet and process is very platform-dependant. We u
 - **Linux**: we use the linux audit framework, auditing successful calls to the connect() system call. Using this, we can check which process opened a certain socket in a time window.
 - **Windows**: using the Python packet psutil, we consult the current operating systems connections correlated with the processes that opened those connections. We are planning to improve this.
 - **MacOS**: in MacOS, with the tcpdump util we can obtain special packet metadata that states which process sent it (this is special to MacOS).
+
+
+### Basic installation and running
+
+The following set of commands should get your Maltrail **Sensor** up and running (out of the box with default settings and monitoring interface "any", sending all the logs to the started local **Server**):
+
+```
+sudo apt-get install git python-pcapy
+git clone https://github.com/stamparm/maltrail.git
+cd maltrail
+sudo python sensor.py
+```
+
+To start the **Server** on same machine, open a new terminal and execute the following (with the default settings, opens the UDP port at 8337 and sets the **Processes sensor** port to ask for the PID of traffic sending processes at TCP 2017):
+
+```
+git clone https://github.com/stamparm/maltrail.git
+cd maltrail
+sudo python server.py
+```
+
+To run the **Processes sensor** on the same machine (with default settings running on TCP port 2017):
+
+Dependencies:
+- **General**: you need the psutil Python package installed on your system.
+- **Linux**: you need also the Linux Audit Framework installed (`sudo apt-get install auditd`).
+- **Windows**: none apart from the general ones.
+- **MacOS**: none apart from the general ones.
+
+Running:
+```
+git clone https://github.com/stamparm/maltrail.git
+cd maltrail
+sudo python proc_sensor.py
+```
+
+To test that everything is up and running you can execute the following (or check the HTTP Reporting Interface):
+
+```
+ping -c 1 136.161.101.53
+cat /var/log/maltrail/$(date +"%Y-%m-%d").log
+```
+
+If you want to access the reporting interface, you can visit the http://127.0.0.1:8338 (default credentials: `admin:changeme!`) from your web browser.
 
 ## Architecture
 
