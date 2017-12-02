@@ -35,7 +35,7 @@ from core.ignore import ignore_event
 # Maximum buffer size for the response to use when calling proc_sensor server.
 _PROC_SENSOR_MAX_BUFFER = 1024
 
-# Maximum buffer size for the response to use when calling proc_sensor server.
+# Name of the request PID function to send to the proc_sensor in the endpoints.
 _PROC_SENSOR_REQ_PID_NAME = "get_pid"
 
 # End proc_sensor related consts.
@@ -253,6 +253,7 @@ def get_connection_pid(event):
         return pid_src, process_name_src
     except:
         if config.SHOW_DEBUG:
+            # Suppress many socket errors if cannot connect to endpoint.
             # traceback.print_exc()
             pass
 

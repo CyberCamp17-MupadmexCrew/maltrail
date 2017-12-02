@@ -53,6 +53,12 @@ from core.settings import TRAILS_FILE
 from core.settings import UNAUTHORIZED_SLEEP_TIME
 from core.settings import VERSION
 
+# Name of the request to kill PID function to send to the proc_sensor in the endpoints.
+_PROC_SENSOR_REQ_KILL_PID = "kill_pid"
+
+# Maximum buffer size for the response to use when calling proc_sensor server.
+_PROC_SENSOR_MAX_BUFFER = 1024
+
 try:
     # Reference: https://bugs.python.org/issue7980
     # Reference: http://code-trick.com/python-bug-attribute-error-_strptime/
@@ -253,6 +259,69 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                     content = content.replace("<!%s!>" % key, value)
 
             return content
+
+        def send_kill_pid(self, pid, ip):
+            """
+            Sends a request to the proc_sensor running in endpoints, asking for killing
+            the PID that sent a malicious packet tracked, and returns the response.
+            Request example: 'kill_pid,1987'
+            Response example: 'correct'
+            :param pid:
+            :param ip:
+            :return:
+            """
+
+            try:
+                data_to_send = "%s,%s" % (_PROC_SENSOR_REQ_KILL_PID, pid)
+
+                if config.SHOW_DEBUG:
+                    print("Requesting the endpoint %s to kill the PID: %s" % (ip, data_to_send))
+
+                # Tries to open a stream socket to the endpoint's proc_sensor and send the data.
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect((ip, config.PROC_SENSOR_PORT))
+                s.send(data_to_send)
+
+                # Retrieves the response from the socket.
+                data_received = s.recv(_PROC_SENSOR_MAX_BUFFER)
+                s.close()
+
+                if config.SHOW_DEBUG:
+                    print("Response from the endpoint %s about the request to kill a PID: %s" % (ip, data_received))
+
+                # Return the info in a nice tuple.
+                return True if data_received.lower().startswith("correct") else False
+            except:
+                if config.SHOW_DEBUG:
+                    # Suppress many socket errors if cannot connect to endpoint.
+                    # traceback.print_exc()
+                    pass
+
+        def _killpid(self, params):
+            """
+            POST request to handle killing the process with the PID in params. Activated when the user clicks on the
+            correspondent button on the Reporting Interface webpage.
+            :param params:
+            :return:
+            """
+
+            # Session control, uncomment!
+            '''
+            session = self.get_session()
+
+            if session is None:
+                self.send_response(httplib.UNAUTHORIZED)
+                self.send_header(HTTP_HEADER.CONNECTION, "close")
+                return None
+            '''
+
+            pid = params.get("pid")
+            ip = params.get("ip")
+
+            if pid and ip:
+                return "Correct" if self.send_kill_pid(pid, ip) else "Error killing process"
+
+            return "Error in params"
 
         def _login(self, params):
             valid = False
