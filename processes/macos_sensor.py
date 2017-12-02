@@ -9,21 +9,11 @@ _NOT_FOUND = '-1,'
 _LOG_PATH = "/tmp"                  # Absolute path for the log directory
 _LOG_FILESIZE = 100000              # in Bytes
 _LOG_COUNT = 1                      # number of logs to rotate
-
-"""
- Sets up basic configuration using the given parameters for the logger module 
- and defines log instances and handlers.
-"""
-
-logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)      
-logger = logging.getLogger('')  
-handler=logging.handlers.RotatingFileHandler(_LOG_PATH+'/tcpdump.log','a',_LOG_FILESIZE,_LOG_COUNT)    
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG) 
  
 
 class MacOSSensor:
     def __init__(self):
+        _init_logger()
         _init_thread()
 
     def search_process(self, prot, ip_dest, port_dest,timestamp):
@@ -33,13 +23,30 @@ class MacOSSensor:
                 if (proc):
                     return proc
         return _NOT_FOUND   
-   
+    
+    def close(self):
+        pass
+
+
  # Private functions
 
 def _init_thread():
-        print '[i] Initializing tcpdump'
-        thread = threading.Thread(target=_print_tcpdump)        
-        thread.start()    
+    print '[i] Initializing tcpdump'
+    thread = threading.Thread(target=_print_tcpdump)        
+    thread.start()    
+
+def _init_logger():
+    """
+     Sets up basic configuration using the given parameters for the logger module 
+     and defines log instances and handlers.
+    """
+
+logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)      
+logger = logging.getLogger('')  
+handler=logging.handlers.RotatingFileHandler(_LOG_PATH+'/tcpdump.log','a',_LOG_FILESIZE,_LOG_COUNT)    
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+    
 
 def _get_timestamp(line):
     """
@@ -58,7 +65,10 @@ def _get_proc(line):
     if((proc == None) or (')' in proc)):
         return _NOT_FOUND
     else:
-        return proc_name+','+proc_pid
+        if (proc_name == _NOT_FOUND):
+            return _NOT_FOUND
+        else:
+            return proc_pid+','+proc_name
     
 def _get_ips(line,mode=1): 
     """

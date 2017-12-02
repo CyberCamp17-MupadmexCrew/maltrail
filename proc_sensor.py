@@ -80,7 +80,6 @@ def get_specific_sensor():
     elif system == MAC:
         return MacOSSensor()
     else:
-
         return GenericSensor()
 
 
