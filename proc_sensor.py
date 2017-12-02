@@ -5,6 +5,7 @@ import psutil
 import platform
 
 from processes import search_process_linux
+from processes import get_pinfo_windows
 
 
 HOST = ''  # All interfaces
@@ -54,7 +55,7 @@ def proc_get_pid(split_data): #Return the response to the server
     if system is LINUX:
         reply = search_process_linux(ipdst, portdst, tstamp)
     elif system is WINDOWS:
-        pass
+        reply = get_pinfo_windows(prot, portdst, ipdst)
     elif system is MAC:
         pass
 
@@ -93,7 +94,7 @@ def proc_recv_data(con, data):
     else:
         reply = "no correct mode"
 
-    con.sendall(reply)
+    con.send(reply)
 
 
 ##### Socket Logic ####
