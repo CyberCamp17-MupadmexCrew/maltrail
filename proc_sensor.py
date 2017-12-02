@@ -8,7 +8,6 @@ import re
 from processes import search_process_linux
 from processes import get_pinfo_windows
 
-
 HOST = ''  # All interfaces
 PORT = 2017
 modes = {"get_pid": "get_pid", "kill_pid": "kill_pid"}
@@ -16,6 +15,7 @@ modes = {"get_pid": "get_pid", "kill_pid": "kill_pid"}
 LINUX = 'Linux'
 WINDOWS = 'Windows'
 MAC = 'Darwin'
+
 
 ## Input Checks
 def is_valid_ip(ip):
@@ -28,36 +28,37 @@ def is_valid_port(port):
 
 
 def is_valid_prot(prot):
-    return prot.lower() in ["tcp","udp","icmp"]
+    return prot.lower() in ["tcp", "udp", "icmp"]
 
 
-def is_valid_timeStamp(tstamp):
+def is_valid_timestamp(tstamp):
     return bool(re.match(r"^\d{4}-\d{2}-\d{2} (\d{1,2}:){2}\d{1,2}\.\d{6}$", tstamp))
 
 
-def is_valid_procName(pname):
+def is_valid_proc_name(pname):
     return bool(re.match(r"^[\w\d _-]+$", pname))
 
 
 def check_get_pid_params(prot, ipdst, portdst, tstamp):
-    return is_valid_prot(prot) and is_valid_ip(ipdst) and is_valid_port(port) and is_valid_timeStamp(tstamp)
+    return is_valid_prot(prot) and is_valid_ip(ipdst) and is_valid_port(port) and is_valid_timestamp(tstamp)
 
 
 def check_kill_pid_params(pid, pname):
-    return str(pid).isdigit() and is_valid_procName(pname)
-    
+    return str(pid).isdigit() and is_valid_proc_name(pname)
+
+
 ####
 
 
 # Example:
 # Receive: get_pid,udp,192.168.0.200,8080,2017-07-03 23:29:32.689208
 # Send: 1298,Firefox
-def proc_get_pid(split_data): #Return the response to the server
+def proc_get_pid(split_data):  # Return the response to the server
     prot, ipdst, portdst, tstamp = split_data
     prot = prot.lower()
     if not check_get_pid_params(prot, ipdst, portdst, tstamp):
         return "-1,error checking input"
-    
+
     system = platform.system()
 
     if system == LINUX:
@@ -72,7 +73,7 @@ def proc_get_pid(split_data): #Return the response to the server
 
 # Example: kill_pid,1987,Firefox
 # Send: correct
-def proc_kill_pid(split_data): #Return the response to the server
+def proc_kill_pid(split_data):  # Return the response to the server
     pid, pname = split_data
     pname = pname.lower()
     error = "error"
