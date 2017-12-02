@@ -120,7 +120,6 @@ def _kill_pid(split_data):
     :return error or successful
     """
     pid, pname = split_data
-    pname = pname.lower()
     error = "error"
 
     if not sanitizer.check_kill_pid_params(pid, pname):
@@ -128,11 +127,9 @@ def _kill_pid(split_data):
 
     try:
         p = psutil.Process(int(pid))
-        if pname == p.name():
-            p.kill()
-            return "correct"
-        else:
-            return error
+        p.kill()
+        return "correct"
+        
     except:
         return error
 
