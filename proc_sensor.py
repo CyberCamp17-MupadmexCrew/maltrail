@@ -1,4 +1,5 @@
 import socket
+import ssl
 import sys
 from thread import *
 import psutil
@@ -6,21 +7,28 @@ import platform
 
 from processes import LinuxSensor, GenericSensor, MacOSSensor
 import signal
-from utils import sanitizer
+from utils import sanitizer, SecureSocket
 
 HOST = ''  # All interfaces
 PORT = 2017
-modes = {"get_pid": "get_pid", "kill_pid": "kill_pid"}
+modes = {'get_pid': 'get_pid', 'kill_pid': 'kill_pid'}
 
+# Platform systems
 LINUX = 'Linux'
 WINDOWS = 'Windows'
 MAC = 'Darwin'
+
+# SSL CERTS
+SENSOR_CERT_FILE = 'misc/cert_sensor.pem'
+SENSOR_KEY_FILE = 'misc/key_sensor.pem'
+SERVER_CERT_FILE = 'misc/server.pem'
 
 
 class ProcessSensor:
     def __init__(self):
         self.sensor = get_specific_sensor()
-        self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.secure_socket = SecureSocket(SecureSocket.SERVER, server_cert=SENSOR_CERT_FILE,
+                                          client_cert=SERVER_CERT_FILE, server_key=SENSOR_KEY_FILE)
 
     def start(self):
         """
@@ -28,22 +36,19 @@ class ProcessSensor:
         """
 
         self._hook_termination_handler()
-
-        try:
-            self.soc.bind((HOST, PORT))
-        except socket.error as msg:
-            print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
-            sys.exit()
-
-        self.soc.listen(5)
+        self.secure_socket.bind(HOST, PORT)
 
         while True:
-            connection, addr = self.soc.accept()
-            start_new_thread(self._client_thread, (connection,))
+            try:
+                connection = self.secure_socket.wait_connection()
+            except socket.error:
+                continue
 
-        self.soc.close()
+            start_new_thread(self._deal_with_client, (connection,))
 
-    def _client_thread(self, connection):
+        self.secure_socket.close()
+
+    def _deal_with_client(self, connection):
         while True:
             data = connection.recv(1024)
             if not data:
@@ -87,12 +92,12 @@ def process_received_data(data, sensor):
     split_data = data.rstrip().split(',')
     mode = split_data[0]
 
-    if mode == modes["get_pid"]:
+    if mode == modes['get_pid']:
         reply = _get_pid(split_data[1:], sensor)
-    elif mode == modes["kill_pid"]:
+    elif mode == modes['kill_pid']:
         reply = _kill_pid(split_data[1:])
     else:
-        reply = "-1, no correct mode"
+        reply = '-1, no correct mode'
 
     return reply
 
@@ -109,7 +114,7 @@ def _get_pid(split_data, sensor):
     prot = prot.lower()
 
     if not sanitizer.check_get_pid_params(prot, ip_dst, port_dst, timestamp):
-        return "-1,error checking input"
+        return '-1,error checking input'
 
     return sensor.search_process(prot, ip_dst, port_dst, timestamp)
 
@@ -120,16 +125,16 @@ def _kill_pid(split_data):
     :return error or successful
     """
     pid, pname = split_data
-    error = "error"
+    error = 'error'
 
     if not sanitizer.check_kill_pid_params(pid, pname):
-        return "error checking input"
+        return 'error checking input'
 
     try:
         p = psutil.Process(int(pid))
         p.kill()
-        return "correct"
-        
+        return 'correct'
+
     except:
         return error
 
