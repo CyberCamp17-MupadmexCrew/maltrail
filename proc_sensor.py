@@ -119,6 +119,8 @@ def proc_recv_data(con, data):
 ##### Socket Logic ####
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+init_detector()
+
 try:
     s.bind((HOST, PORT))
 except socket.error as msg:
