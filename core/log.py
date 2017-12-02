@@ -197,13 +197,13 @@ def log_error(msg):
             traceback.print_exc()
 
 def get_connection_data(event):
-    '''
+    """
     Returns the relevant info about the connection of an event string.
     Event data comes in the form:
     '"2017-12-02 10:33:46.666285" ubuntu-laptop 10.100.1.29 61823 10.100.0.1 53 UDP DNS (raw).githubusercontent.com "malware distribution" malc0de.com'
     :param event:
     :return:
-    '''
+    """
 
     # Split by " to get the timestamp part of the event.
     timestamp_split = event.split("\"", 3)
@@ -215,28 +215,29 @@ def get_connection_data(event):
     return (timestamp, ip_src, port_src, ip_dest, port_dest, prot_dest)
 
 def get_connection_pid(event):
-    '''
+    """
     Sends a request to the proc_sensor running in endpoints, asking for the PID that sent the packet
     tracked in event, and returns the response.
     Request example: 'get_pid,udp,192.168.0.200,8080,2017-07-03 23:29:32.689208'
     Response example: '8392,wget www.google.com'
     :param event:
     :return:
-    '''
+    """
 
     try:
         # Retrieve the connection data from the event.
         timestamp, ip_src, port_src, ip_dest, port_dest, prot_dest = get_connection_data(event)
         # Change '-' char for a 0 in case we don't know the exact port (ICMP...)
-        port_src = port_src if port_src != "-" else "0"
+        #port_src = port_src if port_src != "-" else "0"
         port_dest = port_dest if port_dest != "-" else "0"
         data_to_send = "%s,%s,%s,%s,%s" % (_PROC_SENSOR_REQ_PID_NAME, prot_dest, ip_dest, port_dest, timestamp)
 
         if config.SHOW_DEBUG:
-            print("Requesting the endpoint for a PID: %s" % data_to_send)
+            print("Requesting the endpoint %s for a PID: %s" % (ip_src, data_to_send))
 
         # Tries to open a stream socket to the endpoint's proc_sensor and send the data.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # TODO - check ip_src
         s.connect((ip_src, config.PROC_SENSOR_PORT))
         s.send(data_to_send)
 
@@ -245,7 +246,7 @@ def get_connection_pid(event):
         s.close()
 
         if config.SHOW_DEBUG:
-            print("Response from the endpoint about the request for a PID: %s" % data_received)
+            print("Response from the endpoint %s about the request for a PID: %s" % (ip_src, data_received))
 
         # Return the info in a nice tuple.
         pid_src, process_name_src = data_received.split(",", 2)
@@ -275,6 +276,9 @@ def start_logd(address=None, port=None, join=False):
 
                     if config.SHOW_DEBUG:
                         print("Event to write to log file: %s" % event)
+                else:
+                    # Handle if we didn't receive PID.
+                    event = "%s %s \"%s\"\n" % (event[:-1], "-", "-")
 
                 handle = get_event_log_handle(int(sec), reuse=False)
                 os.write(handle, event)
