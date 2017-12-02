@@ -3,6 +3,7 @@ import sys
 from thread import *
 import psutil
 import platform
+import re
 
 from processes import search_process_linux
 from processes import get_pinfo_windows
@@ -12,7 +13,7 @@ HOST = ''  # All interfaces
 PORT = 2017
 modes = {"get_pid": "get_pid", "kill_pid": "kill_pid"}
 
-LINUX = 'Linus'
+LINUX = 'Linux'
 WINDOWS = 'Windows'
 MAC = 'Darwin'
 
@@ -21,23 +22,30 @@ def is_valid_ip(ip):
     m = re.match(r"^((\d{1,3})\.){3}(\d{1,3})$", ip)
     return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
 
+
 def is_valid_port(port):
     return str(port).isdigit() and int(port) < 65535
+
 
 def is_valid_prot(prot):
     return prot.lower() in ["tcp","udp","icmp"]
 
+
 def is_valid_timeStamp(tstamp):
     return bool(re.match(r"^\d{4}-\d{2}-\d{2} (\d{1,2}:){2}\d{1,2}\.\d{6}$", tstamp))
+
 
 def is_valid_procName(pname):
     return bool(re.match(r"^[\w\d _-]+$", pname))
 
+
 def check_get_pid_params(prot, ipdst, portdst, tstamp):
     return is_valid_prot(prot) and is_valid_ip(ipdst) and is_valid_port(port) and is_valid_timeStamp(tstamp)
 
+
 def check_kill_pid_params(pid, pname):
     return str(pid).isdigit() and is_valid_procName(pname)
+    
 ####
 
 
@@ -52,11 +60,11 @@ def proc_get_pid(split_data): #Return the response to the server
     
     system = platform.system()
 
-    if system is LINUX:
+    if system == LINUX:
         reply = search_process_linux(ipdst, portdst, tstamp)
-    elif system is WINDOWS:
+    elif system == WINDOWS:
         reply = get_pinfo_windows(prot, portdst, ipdst)
-    elif system is MAC:
+    elif system == MAC:
         pass
 
     return reply
