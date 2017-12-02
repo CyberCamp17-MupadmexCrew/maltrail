@@ -233,7 +233,7 @@ def get_connection_pid(event):
         data_to_send = "%s,%s,%s,%s,%s" % (_PROC_SENSOR_REQ_PID_NAME, prot_dest, ip_dest, port_dest, timestamp)
 
         if config.SHOW_DEBUG:
-            print("Requesting the endpoint for a PID: ", data_to_send)
+            print("Requesting the endpoint for a PID: %s" % data_to_send)
 
         # Tries to open a stream socket to the endpoint's proc_sensor and send the data.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -245,14 +245,15 @@ def get_connection_pid(event):
         s.close()
 
         if config.SHOW_DEBUG:
-            print("Response from the endpoint about the request for a PID: ", data_received)
+            print("Response from the endpoint about the request for a PID: %s" % data_received)
 
         # Return the info in a nice tuple.
         pid_src, process_name_src = data_received.split(",", 2)
         return pid_src, process_name_src
     except:
         if config.SHOW_DEBUG:
-            traceback.print_exc()
+            # traceback.print_exc()
+            pass
 
 def start_logd(address=None, port=None, join=False):
     class ThreadingUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
@@ -268,9 +269,12 @@ def start_logd(address=None, port=None, join=False):
                 pid_info = get_connection_pid(event)
 
                 # If we got the PID info, add this to the event.
-                if pid_info:
+                if pid_info and pid_info != ("-1", ""):
                     pid_src, process_name_src = pid_info
-                    event = "%s %s \"%s\"" % (event, pid_src, process_name_src)
+                    event = "%s %s \"%s\"\n" % (event[:-1], pid_src, process_name_src)
+
+                    if config.SHOW_DEBUG:
+                        print("Event to write to log file: %s" % event)
 
                 handle = get_event_log_handle(int(sec), reuse=False)
                 os.write(handle, event)
