@@ -1,2 +1,2 @@
-from linux_detector import search_process, init_detector
-from windows_detector import get_pinfo_windows
+from linux_sensor import LinuxSensor
+from generic_sensor import GenericSensor
