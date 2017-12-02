@@ -5,6 +5,7 @@
 ## Content
 
 - [Introduction](#introduction)
+- [CyberCamp 2017 new functionalities](#cybercamp-2017-new-functionalities)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
 - [Administrator's guide](#administrators-guide)
@@ -140,6 +141,23 @@ waterbug, wecorl, wndred, xadupi, xcodeghost, xtrat, yenibot,
 yimfoca, zaletelly, zcrypt, zemot, zeroaccess, zeus, zherotee, 
 zlader, zlob, zombrari, zxshell, etc.
 ```
+
+## CyberCamp 2017 new functionalities
+
+We want to improve Maltrail for it to be able to also monitor processes running in endpoints in the local network that sent malicious traffic.
+
+With this change, Maltrail will be able to log and show the new process information in the [Reporting interface](#reporting-interface). This can also improve Maltrail functionalities further, as we are planning for Maltrail to be able to act not only as a Detection system, but also as a Prevention system. As an example, knowing the PID / name of a malicious traffic sending process in an endpoint, we could implement new functionality for sending a request for killing this process.
+
+We need to implement a new "sensor" that runs in the endpoint, this sensor is monitoring and correlating the packets that the endpoint sends with the process that sent it. This can prove to be very cumbersome depending on the underlying operating system. We are planning to have multi-platform support, fot it to work on Linux, Windows, and MacOS operating systems. The new architecture for the Maltrail solution can be like this:
+
+![New architecture diagram](https://i.imgur.com/n9oqwpF.png)
+
+This new sensor can run a small server that accepts requests asking for a process that opened a certain connection. It can also accept another request for killing this process.
+
+The correlation between sent packet and process is very platform-dependant. We use these technologies for the different operating systems:
+- **Linux**: we use the linux audit framework, auditing successful calls to the connect() system call. Using this, we can check which process opened a certain socket in a time window.
+- **Windows**: using the Python packet psutil, we consult the current operating systems connections correlated with the processes that opened those connections. We are planning to improve this.
+- **MacOS**: in MacOS, with the tcpdump util we can obtain special packet metadata that states which process sent it (this is special to MacOS).
 
 ## Architecture
 

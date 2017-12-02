@@ -14,6 +14,7 @@ class LinuxSensor:
         print '[i] Initializing audit daemon and hooking up rules'
         _exec_and_wait('/etc/init.d/auditd start')
         _exec_and_wait('auditctl -a exit,always -F arch=b64 -S connect -k maltrail')
+        print '[i] Linux sensor ready'
 
     def search_process(self, prot, ip_dest, port_dest, timestamp):
         timestamp_end, timestamp_start = _parse_timestamp(timestamp)
@@ -40,6 +41,7 @@ def _parse_timestamp(timestamp):
     start_datetime = end_datetime - datetime.timedelta(seconds=_WINDOW_OF_SEARCH)
 
     return end_datetime.strftime(_DATE_FORMAT), start_datetime.strftime(_DATE_FORMAT)
+
 
 def _get_last_connection(ip_dest, port_dest, timestamp_end, timestamp_start):
     """
@@ -88,7 +90,7 @@ def _exec_and_wait(command):
 
 def _parse_pid(raw_connection):
     print '[i] Raw response: ' + raw_connection
-    pid = re.search('pid=(\d+)', raw_connection).group(1)
+    pid = re.search(' pid=(\d+)', raw_connection).group(1)
     process_name = re.search('proctitle=(.+)', raw_connection).group(1)
 
     return pid + ',' + process_name
