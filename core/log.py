@@ -186,6 +186,13 @@ def log_error(msg):
         if config.SHOW_DEBUG:
             traceback.print_exc()
 
+def get_connection_data(event):
+    timestampSplit = event.split("\"", 3)
+    timestamp = timestampSplit[1]
+    ip_src, port_src, ip_dest, port_dest, prot_dest = timestampSplit[2].split(" ", 7)[2:7]
+
+    return (timestamp, ip_src, port_src, ip_dest, port_dest, prot_dest)
+
 def start_logd(address=None, port=None, join=False):
     class ThreadingUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
         pass
@@ -195,9 +202,21 @@ def start_logd(address=None, port=None, join=False):
             try:
                 data, _ = self.request
                 sec, event = data.split(" ", 1)
+
                 handle = get_event_log_handle(int(sec), reuse=False)
                 os.write(handle, event)
                 os.close(handle)
+
+                timestamp, ip_src, port_src, ip_dest, port_dest, prot_dest = get_connection_data(event)
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect(("192.168.43.130", 2017))
+                toSend = "%s,%s,%s,%s,%s" % ("get_pid", prot_dest, ip_dest, port_dest, timestamp)
+                s.send(toSend)
+                #pid_src, process_name_src = s.recv(1024).split(",", 2)
+                received = s.recv(1024)
+                s.close()
+
+                print("Received: ", received)
             except:
                 if config.SHOW_DEBUG:
                     traceback.print_exc()
