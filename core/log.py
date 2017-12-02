@@ -271,7 +271,7 @@ def start_logd(address=None, port=None, join=False):
                 pid_info = get_connection_pid(event)
 
                 # If we got the PID info, add this to the event.
-                if pid_info and pid_info != ("-1", ""):
+                if pid_info and pid_info[0] != "-1":
                     pid_src, process_name_src = pid_info
                     event = "%s %s \"%s\"\n" % (event[:-1], pid_src, process_name_src)
 

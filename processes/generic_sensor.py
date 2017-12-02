@@ -6,7 +6,7 @@ class GenericSensor:
         pass
 
     def search_process(self, prot, ip_dst, port_dst, timestamp):
-        unknown = "-1,unknown"
+        unknown = "-1,"
         if not prot.lower() in ["tcp", "udp"]:
             return unknown
 
