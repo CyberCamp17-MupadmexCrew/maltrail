@@ -5,7 +5,10 @@ import psutil
 import platform
 import re
 
-from processes import search_process_linux
+from processes import get_pinfo_windows
+from processes import init_detector
+from processes import search_process
+
 from processes import get_pinfo_windows
 
 HOST = ''  # All interfaces
@@ -62,13 +65,20 @@ def proc_get_pid(split_data):  # Return the response to the server
     system = platform.system()
 
     if system == LINUX:
-        reply = search_process_linux(ipdst, portdst, tstamp)
+        reply = search_process(ipdst, portdst, tstamp)
     elif system == WINDOWS:
         reply = get_pinfo_windows(prot, portdst, ipdst)
     elif system == MAC:
         pass
 
     return reply
+
+
+def init_sensors():
+    system = platform.system()
+
+    if system == LINUX:
+        init_detector()
 
 
 # Example: kill_pid,1987,Firefox

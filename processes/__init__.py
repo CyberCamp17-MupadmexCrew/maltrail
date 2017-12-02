@@ -1,2 +1,2 @@
-from linux_detector import search_process as search_process_linux
+from linux_detector import search_process, init_detector
 from windows_detector import get_pinfo_windows
