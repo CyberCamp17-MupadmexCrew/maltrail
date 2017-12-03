@@ -5,7 +5,7 @@ from thread import *
 import psutil
 import platform
 
-from processes import LinuxSensor, GenericSensor, MacOSSensor
+from processes import LinuxSensor, WindowsSensor, MacOSSensor, GenericSensor
 import signal
 from utils import sanitizer, SecureSocket
 
@@ -81,7 +81,7 @@ def get_specific_sensor():
     if system == LINUX:
         return LinuxSensor()
     elif system == WINDOWS:
-        return GenericSensor()
+        return WindowsSensor()
     elif system == MAC:
         return MacOSSensor()
     else:
