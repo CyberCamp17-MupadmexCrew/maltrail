@@ -322,14 +322,12 @@ def start_httpd(address=None, port=None, join=False, pem=None):
             """
 
             # Session control, uncomment!
-            '''
             session = self.get_session()
 
             if session is None:
                 self.send_response(httplib.UNAUTHORIZED)
                 self.send_header(HTTP_HEADER.CONNECTION, "close")
                 return None
-            '''
 
             pid = params.get("pid")
             ip = params.get("ip")
