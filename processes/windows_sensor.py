@@ -5,31 +5,31 @@ import os, re
 _DIR_PATH = "C:\Windows\Logs\maltrail\\"
 _LOG_PATH = _DIR_PATH + "log.etl"
 _NOT_FOUND = '-1,'
-_STOP_LOGGING = "Stop-NetEventSession -Name '"+session_name+"'; Remove-NetEventSession -Name '"+session_name+"';"
+_SESSION_NAME = "Session1"
+_STOP_LOGGING = "Stop-NetEventSession -Name '"+_SESSION_NAME+"'; Remove-NetEventSession -Name '"+_SESSION_NAME+"';"
 
 
 
 class WindowsSensor:
     def __init__(self):
         print '[i] Initializing NetEventSession'
-        session_name = "Session1"
         max_size_logs = 5
         event_prov_name = "Microsoft-Windows-TCPIP"
-        start_logging = "New-NetEventSession -Name '"+session_name+"' -CaptureMode SaveToFile -LocalFilePath '"+_LOG_PATH+"' -MaxFileSize "+str(max_size_logs)+"; Add-NetEventProvider -Name '"+event_prov_name+"' -SessionName '"+session_name+"'; Start-NetEventSession -Name '"+session_name+"';"
+        start_logging = "New-NetEventSession -Name '"+_SESSION_NAME+"' -CaptureMode SaveToFile -LocalFilePath '"+_LOG_PATH+"' -MaxFileSize "+str(max_size_logs)+"; Add-NetEventProvider -Name '"+event_prov_name+"' -SessionName '"+_SESSION_NAME+"'; Start-NetEventSession -Name '"+_SESSION_NAME+"';"
         _create_dir(_DIR_PATH)
         _create_file(_LOG_PATH)
-        stdout,stderr = execute_pwshell(_STOP_LOGGING)
+        stdout,stderr = _execute_pwshell(_STOP_LOGGING)
         stdout,stderr = _execute_pwshell(start_logging)
         print '[i] Windows sensor ready'
 
     def search_process(self, prot, ip_dest, port_dest, timestamp):
-        wait_log = "Stop-NetEventSession -Name '"+session_name+"';"
+        wait_log = "Stop-NetEventSession -Name '"+_SESSION_NAME+"';"
         stdout,stderr = _execute_pwshell(wait_log)
         
         get_event_str = "$logs = Get-WinEvent -Path '"+_LOG_PATH+"' -Oldest; foreach ($log in $logs){ $log.Message }" 
         stdout_events,stderr = _execute_pwshell(get_event_str)
 
-        resume_log = "Start-NetEventSession -Name '"+session_name+"';"
+        resume_log = "Start-NetEventSession -Name '"+_SESSION_NAME+"';"
         stdout,stderr = _execute_pwshell(resume_log)
 
         if (prot == "icmp"):
@@ -50,7 +50,7 @@ class WindowsSensor:
         """
         Close the NetEvenSession before exit
         """
-        stdout,stderr = execute_pwshell(_STOP_LOGGING)
+        stdout,stderr = _execute_pwshell(_STOP_LOGGING)
 
 
 
