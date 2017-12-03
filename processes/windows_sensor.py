@@ -2,8 +2,8 @@ from subprocess import Popen, PIPE
 import psutil
 import os, re
 
-_DIR_PATH = "D:\Sistema\Escritorio\\"
-_LOG_PATH = _DIR_PATH + "log11.etl"
+_DIR_PATH = "C:\Windows\Logs\maltrail\\"
+_LOG_PATH = _DIR_PATH + "log.etl"
 _NOT_FOUND = '-1,'
 
 
@@ -14,6 +14,7 @@ class WindowsSensor:
         max_size_logs = 5
         event_prov_name = "Microsoft-Windows-TCPIP"
         start_logging = "New-NetEventSession -Name '"+session_name+"' -CaptureMode SaveToFile -LocalFilePath '"+_LOG_PATH+"' -MaxFileSize "+str(max_size_logs)+"; Add-NetEventProvider -Name '"+event_prov_name+"' -SessionName '"+session_name+"'; Start-NetEventSession -Name '"+session_name+"';"
+        _create_dir(_DIR_PATH)
         _create_file(_LOG_PATH)
         stdout,stderr = _execute_pwshell(start_logging)
         print '[i] Windows sensor ready'
@@ -28,7 +29,10 @@ class WindowsSensor:
         resume_log = "Start-NetEventSession -Name '"+session_name+"';"
         stdout,stderr = _execute_pwshell(resume_log)
 
-        search_pid = ip_dest+":"+port_dest
+        if (prot == "icmp"):
+            search_pid = ip_dest
+        else: 
+            search_pid = ip_dest+":"+port_dest
         for msg in stdout_events.split('\n'):
             if (search_pid in msg):
                 check = re.search('PID = (\d{1,5}).*', msg)
@@ -49,6 +53,10 @@ class WindowsSensor:
 
 
 #Private functions
+
+def _create_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def _create_file(path):
     """
