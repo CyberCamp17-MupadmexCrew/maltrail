@@ -67,16 +67,16 @@ def _get_command(ip_dest, port_dest, timestamp_end, timestamp_start):
     """
     Get the ausearch command to perform the search
     """
-    return 'ausearch -i -sc connect -e 0 -k maltrail -te ' + timestamp_end + ' -ts ' + timestamp_start \
-           + '| grep "laddr=' + ip_dest + ' lport=' + port_dest + '" -C 1 ' + '| tail -3'
+    return 'ausearch -i -sc connect -k maltrail -te ' + timestamp_end + ' -ts ' + timestamp_start \
+           + ' | grep "' + ip_dest + ' .*' + port_dest + '" -C 1 ' + '| tail -3'
 
 
 def _get_command_without_port(ip_dest, timestamp_end, timestamp_start):
     """
     Get the ausearch command to perform the search without taking into account the port
     """
-    return 'ausearch -i -sc connect -e 0 -k maltrail -te ' + timestamp_end + ' -ts ' + timestamp_start \
-           + '| grep "laddr=' + ip_dest + '"  -C 1 ' + '| tail -3'
+    return 'ausearch -i -sc connect -k maltrail -te ' + timestamp_end + ' -ts ' + timestamp_start \
+           + ' | grep "' + ip_dest + '"  -C 1 ' + '| tail -3'
 
 
 def _exec_and_wait(command):
