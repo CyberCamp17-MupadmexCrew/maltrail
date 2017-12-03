@@ -5,6 +5,8 @@ import os, re
 _DIR_PATH = "C:\Windows\Logs\maltrail\\"
 _LOG_PATH = _DIR_PATH + "log.etl"
 _NOT_FOUND = '-1,'
+_STOP_LOGGING = "Stop-NetEventSession -Name '"+session_name+"'; Remove-NetEventSession -Name '"+session_name+"';"
+
 
 
 class WindowsSensor:
@@ -16,6 +18,7 @@ class WindowsSensor:
         start_logging = "New-NetEventSession -Name '"+session_name+"' -CaptureMode SaveToFile -LocalFilePath '"+_LOG_PATH+"' -MaxFileSize "+str(max_size_logs)+"; Add-NetEventProvider -Name '"+event_prov_name+"' -SessionName '"+session_name+"'; Start-NetEventSession -Name '"+session_name+"';"
         _create_dir(_DIR_PATH)
         _create_file(_LOG_PATH)
+        stdout,stderr = execute_pwshell(_STOP_LOGGING)
         stdout,stderr = _execute_pwshell(start_logging)
         print '[i] Windows sensor ready'
 
@@ -47,8 +50,7 @@ class WindowsSensor:
         """
         Close the NetEvenSession before exit
         """
-        stop_logging = "Stop-NetEventSession -Name '"+session_name+"'; Remove-NetEventSession -Name '"+session_name+"';"
-        stdout,stderr = execute_pwshell(stop_logging)
+        stdout,stderr = execute_pwshell(_STOP_LOGGING)
 
 
 
