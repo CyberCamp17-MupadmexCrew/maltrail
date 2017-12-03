@@ -12,12 +12,12 @@ _LOG_COUNT = 1                      # number of logs to rotate
 
 class MacOSSensor:
     def __init__(self):
-        _init_logger()
         _init_thread()
 
     def search_process(self, prot, ip_dest, port_dest,timestamp):
         for filename in os.listdir(_LOG_PATH):
             if (filename.startswith('tcpdump.log')):
+                
                 proc = _process_file(_LOG_PATH+'/'+filename, prot, ip_dest, port_dest)
                 if (proc):
                     return proc
@@ -29,8 +29,10 @@ class MacOSSensor:
  # Private functions
 
 def _init_thread():
+
+    logger = _init_logger()
     print '[i] Initializing tcpdump'
-    thread = threading.Thread(target=_print_tcpdump)
+    thread = threading.Thread(target=_print_tcpdump,args=[logger])
     thread.start()
 
 def _init_logger():
@@ -39,11 +41,13 @@ def _init_logger():
      and defines log instances and handlers.
     """
 
-logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)
-logger = logging.getLogger('')
-handler=logging.handlers.RotatingFileHandler(_LOG_PATH+'/tcpdump.log','a',_LOG_FILESIZE,_LOG_COUNT)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+    logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)
+    logger = logging.getLogger('')
+    handler=logging.handlers.RotatingFileHandler(_LOG_PATH+'/tcpdump.log','a',_LOG_FILESIZE,_LOG_COUNT)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+    return logger
 
 
 def _get_timestamp(line):
@@ -56,8 +60,8 @@ def _get_proc(line):
     """
      Extracts the process name and id for the given log line or _NOT_FOUND
     """
-
-    proc=line.partition('(')[-1].rpartition(')')[0]
+    proc=line.partition('(')[-1].partition(')')[0]
+    proc=proc.partition(',')[0]
     proc_name,_,proc_pid=proc.partition(' ')[-1].rpartition(':')
 
     if((proc == None) or (')' in proc)):
@@ -86,7 +90,7 @@ def _get_ips(line,mode=1):
     else:
         return ip_src,p_src,ip_dest,port_dest
 
-def _print_tcpdump():
+def _print_tcpdump(logger):
     """
      Writes the stdout of tcpdump to a file using the logger module
     """
@@ -106,4 +110,6 @@ def _process_file(file, prot, ip_dest, port_dest):
                 return _get_proc(line)
         else:
             if ((ip_dest,port_dest) == _get_ips(line)):
-                return _get_proc(line)
+                aux_proc=_get_proc(line)
+                if not(aux_proc==","):
+                    return aux_proc
