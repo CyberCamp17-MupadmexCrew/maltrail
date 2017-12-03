@@ -124,10 +124,10 @@ def _kill_pid(split_data):
     :param split_data: Data representing the request fields. Example: kill_pid,1987,Firefox
     :return error or successful
     """
-    pid, pname = split_data
+    pid = split_data[0]
     error = 'error'
 
-    if not sanitizer.check_kill_pid_params(pid, pname):
+    if not sanitizer.check_kill_pid_params(pid):
         return 'error checking input'
 
     try:

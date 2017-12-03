@@ -53,7 +53,15 @@ from core.settings import TRAILS_FILE
 from core.settings import UNAUTHORIZED_SLEEP_TIME
 from core.settings import VERSION
 
+# SSL CERTS
+
+SENSOR_CERT_FILE = 'misc/cert_sensor.pem'
+SENSOR_KEY_FILE = 'misc/key_sensor.pem'
+SERVER_CERT_FILE = 'misc/server.pem'
+
 # Name of the request to kill PID function to send to the proc_sensor in the endpoints.
+from utils import SecureSocket
+
 _PROC_SENSOR_REQ_KILL_PID = "kill_pid"
 
 # Maximum buffer size for the response to use when calling proc_sensor server.
@@ -68,9 +76,11 @@ except ImportError:
 
 try:
     import resource
+
     resource.setrlimit(resource.RLIMIT_NOFILE, (MAX_NOFILE, MAX_NOFILE))
 except:
     pass
+
 
 def start_httpd(address=None, port=None, join=False, pem=None):
     """
@@ -141,7 +151,9 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                 if not os.path.isfile(path) and os.path.isfile("%s.html" % path):
                     path = "%s.html" % path
 
-                if ".." not in os.path.relpath(path, HTML_DIR) and os.path.isfile(path) and (extension not in DISABLED_CONTENT_EXTENSIONS or os.path.split(path)[-1] in CONTENT_EXTENSIONS_EXCLUSIONS):
+                if ".." not in os.path.relpath(path, HTML_DIR) and os.path.isfile(path) and (
+                        extension not in DISABLED_CONTENT_EXTENSIONS or os.path.split(path)[
+                    -1] in CONTENT_EXTENSIONS_EXCLUSIONS):
                     mtime = time.gmtime(os.path.getmtime(path))
                     if_modified_since = self.headers.get(HTTP_HEADER.IF_MODIFIED_SINCE)
 
@@ -157,25 +169,29 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                         last_modified = time.strftime(HTTP_TIME_FORMAT, mtime)
                         self.send_response(httplib.OK)
                         self.send_header(HTTP_HEADER.CONNECTION, "close")
-                        self.send_header(HTTP_HEADER.CONTENT_TYPE, mimetypes.guess_type(path)[0] or "application/octet-stream")
+                        self.send_header(HTTP_HEADER.CONTENT_TYPE,
+                                         mimetypes.guess_type(path)[0] or "application/octet-stream")
                         self.send_header(HTTP_HEADER.LAST_MODIFIED, last_modified)
                         if extension not in (".htm", ".html"):
-                            self.send_header(HTTP_HEADER.EXPIRES, "Sun, 17-Jan-2038 19:14:07 GMT")        # Reference: http://blog.httpwatch.com/2007/12/10/two-simple-rules-for-http-caching/
-                            self.send_header(HTTP_HEADER.CACHE_CONTROL, "max-age=3600, must-revalidate")  # Reference: http://stackoverflow.com/a/5084555
+                            self.send_header(HTTP_HEADER.EXPIRES,
+                                             "Sun, 17-Jan-2038 19:14:07 GMT")  # Reference: http://blog.httpwatch.com/2007/12/10/two-simple-rules-for-http-caching/
+                            self.send_header(HTTP_HEADER.CACHE_CONTROL,
+                                             "max-age=3600, must-revalidate")  # Reference: http://stackoverflow.com/a/5084555
                         else:
                             self.send_header(HTTP_HEADER.CACHE_CONTROL, "no-cache")
 
                 else:
                     self.send_response(httplib.NOT_FOUND)
                     self.send_header(HTTP_HEADER.CONNECTION, "close")
-                    content = '<!DOCTYPE html><html lang="en"><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL %s was not found on this server.</p></body></html>' % self.path.split('?')[0]
+                    content = '<!DOCTYPE html><html lang="en"><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL %s was not found on this server.</p></body></html>' % \
+                              self.path.split('?')[0]
 
             if content is not None:
                 for match in re.finditer(r"<\!(\w+)\!>", content):
                     name = match.group(1)
                     _ = getattr(self, "_%s" % name.lower(), None)
                     if _:
-                        content = self._format(content, **{ name: _() })
+                        content = self._format(content, **{name: _()})
 
                 if "gzip" in self.headers.getheader(HTTP_HEADER.ACCEPT_ENCODING, ""):
                     self.send_header(HTTP_HEADER.CONTENT_ENCODING, "gzip")
@@ -277,14 +293,14 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                 if config.SHOW_DEBUG:
                     print("Requesting the endpoint %s to kill the PID: %s" % (ip, data_to_send))
 
-                # Tries to open a stream socket to the endpoint's proc_sensor and send the data.
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((ip, config.PROC_SENSOR_PORT))
-                s.send(data_to_send)
+                secure_socket = SecureSocket(SecureSocket.CLIENT, client_cert=SERVER_CERT_FILE,
+                                             server_cert=SENSOR_CERT_FILE)
 
-                # Retrieves the response from the socket.
-                data_received = s.recv(_PROC_SENSOR_MAX_BUFFER)
-                s.close()
+                secure_socket.connect(ip, config.PROC_SENSOR_PORT)
+                secure_socket.send(data_to_send)
+
+                data_received = secure_socket.read()
+                secure_socket.close()
 
                 if config.SHOW_DEBUG:
                     print("Response from the endpoint %s about the request to kill a PID: %s" % (ip, data_received))
@@ -318,6 +334,12 @@ def start_httpd(address=None, port=None, join=False, pem=None):
             pid = params.get("pid")
             ip = params.get("ip")
 
+            session_id = os.urandom(SESSION_ID_LENGTH).encode("hex")
+            expiration = time.time() + 3600 * SESSION_EXPIRATION_HOURS
+            self.send_response(httplib.OK)
+            self.send_header(HTTP_HEADER.CONNECTION, "close")
+            self.send_header(HTTP_HEADER.CONTENT_TYPE, "text/plain")
+
             if pid and ip:
                 return "Correct" if self.send_kill_pid(pid, ip) else "Error killing process"
 
@@ -334,7 +356,8 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                         username, stored_hash, uid, netfilter = entry.split(':')
                         if username == params.get("username"):
                             try:
-                                if params.get("hash") == hashlib.sha256(stored_hash.strip() + params.get("nonce")).hexdigest():
+                                if params.get("hash") == hashlib.sha256(
+                                                stored_hash.strip() + params.get("nonce")).hexdigest():
                                     valid = True
                                     break
                             except:
@@ -347,7 +370,8 @@ def start_httpd(address=None, port=None, join=False, pem=None):
 
                 self.send_response(httplib.OK)
                 self.send_header(HTTP_HEADER.CONNECTION, "close")
-                self.send_header(HTTP_HEADER.SET_COOKIE, "%s=%s; expires=%s; path=/; HttpOnly" % (SESSION_COOKIE_NAME, session_id, time.strftime(HTTP_TIME_FORMAT, time.gmtime(expiration))))
+                self.send_header(HTTP_HEADER.SET_COOKIE, "%s=%s; expires=%s; path=/; HttpOnly" % (
+                SESSION_COOKIE_NAME, session_id, time.strftime(HTTP_TIME_FORMAT, time.gmtime(expiration))))
 
                 if netfilter in ("", "0.0.0.0/0"):
                     netfilters = None
@@ -381,7 +405,9 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                     if addresses:
                         netfilters.add(get_regex(addresses))
 
-                SESSIONS[session_id] = AttribDict({"username": username, "uid": uid, "netfilters": netfilters, "expiration": expiration, "client_ip": self.client_address[0]})
+                SESSIONS[session_id] = AttribDict(
+                    {"username": username, "uid": uid, "netfilters": netfilters, "expiration": expiration,
+                     "client_ip": self.client_address[0]})
             else:
                 time.sleep(UNAUTHORIZED_SLEEP_TIME)
                 self.send_response(httplib.UNAUTHORIZED)
@@ -392,7 +418,10 @@ def start_httpd(address=None, port=None, join=False, pem=None):
 
             if not subprocess.mswindows:
                 try:
-                    subprocess.check_output("logger -p auth.info -t \"%s[%d]\" \"%s password for %s from %s port %s\"" % (NAME.lower(), os.getpid(), "Accepted" if valid else "Failed", params.get("username"), self.client_address[0], self.client_address[1]), stderr=subprocess.STDOUT, shell=True)
+                    subprocess.check_output(
+                        "logger -p auth.info -t \"%s[%d]\" \"%s password for %s from %s port %s\"" % (
+                        NAME.lower(), os.getpid(), "Accepted" if valid else "Failed", params.get("username"),
+                        self.client_address[0], self.client_address[1]), stderr=subprocess.STDOUT, shell=True)
                 except Exception:
                     if config.SHOW_DEBUG:
                         traceback.print_exc()
@@ -434,7 +463,8 @@ def start_httpd(address=None, port=None, join=False, pem=None):
                 else:
                     _ = (ipcat_lookup(params.get("address")) or "").lower().split(' ')
                     result_ipcat = _[1] if _[0] == 'the' else _[0]
-                return ("%s" if not params.get("callback") else "%s(%%s)" % params.get("callback")) % json.dumps({"ipcat": result_ipcat, "worst_asns": str(result_worst is not None).lower()})
+                return ("%s" if not params.get("callback") else "%s(%%s)" % params.get("callback")) % json.dumps(
+                    {"ipcat": result_ipcat, "worst_asns": str(result_worst is not None).lower()})
             except:
                 if config.SHOW_DEBUG:
                     traceback.print_exc()
@@ -577,7 +607,8 @@ def start_httpd(address=None, port=None, join=False, pem=None):
 
                             content = buffer.getvalue()
                             end = start + len(content) - 1
-                            self.send_header(HTTP_HEADER.CONTENT_RANGE, "bytes %d-%d/%d" % (start, end, end + 1 + max_size * (len(content) >= max_size)))
+                            self.send_header(HTTP_HEADER.CONTENT_RANGE, "bytes %d-%d/%d" % (
+                            start, end, end + 1 + max_size * (len(content) >= max_size)))
 
                         if len(content) < max_size:
                             session.range_handle.close()
@@ -665,7 +696,8 @@ def start_httpd(address=None, port=None, join=False, pem=None):
 
     try:
         if pem:
-            server = SSLThreadingServer((address or '', int(port) if str(port or "").isdigit() else 0), pem, SSLReqHandler)
+            server = SSLThreadingServer((address or '', int(port) if str(port or "").isdigit() else 0), pem,
+                                        SSLReqHandler)
         else:
             server = ThreadingServer((address or '', int(port) if str(port or "").isdigit() else 0), ReqHandler)
     except Exception as ex:
@@ -678,7 +710,8 @@ def start_httpd(address=None, port=None, join=False, pem=None):
         else:
             raise
 
-    print "[i] starting HTTP%s server at 'http%s://%s:%d/'" % ('S' if pem else "", 's' if pem else "", server.server_address[0], server.server_address[1])
+    print "[i] starting HTTP%s server at 'http%s://%s:%d/'" % (
+    'S' if pem else "", 's' if pem else "", server.server_address[0], server.server_address[1])
 
     print "[o] running..."
 
