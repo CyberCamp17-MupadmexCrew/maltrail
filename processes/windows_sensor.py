@@ -41,7 +41,7 @@ class WindowsSensor:
                 check = re.search('PID = (\d{1,5}).*', msg)
                 if (check):
                     pid = check.group(1)
-                    pname = psutil.Process(int(pid)).pname()
+                    pname = psutil.Process(int(pid)).name()
                     return str(pid) + ',' + pname
         
         return _NOT_FOUND
