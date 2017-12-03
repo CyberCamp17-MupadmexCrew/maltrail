@@ -29,6 +29,13 @@ from core.settings import TIME_FORMAT
 from core.settings import TRAILS_FILE
 from core.settings import VERSION
 from core.ignore import ignore_event
+from utils import SecureSocket
+
+# SSL CERTS
+
+SENSOR_CERT_FILE = 'misc/cert_sensor.pem'
+SENSOR_KEY_FILE = 'misc/key_sensor.pem'
+SERVER_CERT_FILE = 'misc/server.pem'
 
 # Begin proc_sensor related consts.
 
@@ -236,14 +243,14 @@ def get_connection_pid(event):
             print("Requesting the endpoint %s for a PID: %s" % (ip_src, data_to_send))
 
         # Tries to open a stream socket to the endpoint's proc_sensor and send the data.
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # TODO - check ip_src
-        s.connect((ip_src, config.PROC_SENSOR_PORT))
-        s.send(data_to_send)
 
-        # Retrieves the response from the socket.
-        data_received = s.recv(_PROC_SENSOR_MAX_BUFFER)
-        s.close()
+        secure_socket = SecureSocket(SecureSocket.CLIENT, client_cert=SERVER_CERT_FILE, server_cert=SENSOR_CERT_FILE)
+
+        secure_socket.connect(ip_src, config.PROC_SENSOR_PORT)
+        secure_socket.send(data_to_send)
+
+        data_received = secure_socket.read()
+        secure_socket.close()
 
         if config.SHOW_DEBUG:
             print("Response from the endpoint %s about the request for a PID: %s" % (ip_src, data_received))
@@ -271,7 +278,7 @@ def start_logd(address=None, port=None, join=False):
                 pid_info = get_connection_pid(event)
 
                 # If we got the PID info, add this to the event.
-                if pid_info and pid_info != ("-1", ""):
+                if pid_info and pid_info[0] != "-1":
                     pid_src, process_name_src = pid_info
                     event = "%s %s \"%s\"\n" % (event[:-1], pid_src, process_name_src)
 
